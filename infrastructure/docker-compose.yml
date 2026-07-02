@@ -100,7 +100,6 @@ services:
 
   airflow-init:
     <<: *airflow-common
-    command: version
     entrypoint: /bin/bash
     command:
       - -c
