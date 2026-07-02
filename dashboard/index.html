@@ -1,0 +1,1637 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShopFlow — ETL Pipeline & Analytics Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: #121824;
+            --bg-tertiary: #1b2336;
+            --accent-primary: #3b82f6;
+            --accent-primary-glow: rgba(59, 130, 246, 0.15);
+            --accent-success: #10b981;
+            --accent-success-glow: rgba(16, 185, 129, 0.15);
+            --accent-warning: #f59e0b;
+            --accent-danger: #ef4444;
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --glass-bg: rgba(18, 24, 36, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.05);
+            --font-main: 'Plus Jakarta Sans', sans-serif;
+            --font-title: 'Outfit', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.03) 0%, transparent 40%);
+            background-attachment: fixed;
+        }
+
+        /* Layout Structure */
+        .app-container {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styling */
+        aside {
+            background-color: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            padding: 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .brand-logo {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-success));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 1.25rem;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+
+        .brand-name {
+            font-family: var(--font-title);
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #fff, var(--text-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            flex-grow: 1;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.85rem 1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+
+        .nav-item:hover {
+            color: var(--text-primary);
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+
+        .nav-item.active {
+            color: #fff;
+            background: var(--accent-primary-glow);
+            border-color: rgba(59, 130, 246, 0.2);
+            font-weight: 600;
+        }
+
+        .nav-item i {
+            font-size: 1.1rem;
+            width: 20px;
+        }
+
+        .sidebar-footer {
+            border-top: 1px solid var(--border-color);
+            padding-top: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-success);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent-success);
+        }
+
+        /* Main Content Container */
+        main {
+            padding: 2.5rem;
+            overflow-y: auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .header-title h1 {
+            font-family: var(--font-title);
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.35rem;
+        }
+
+        .header-title p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        /* Buttons styling */
+        .btn {
+            padding: 0.75rem 1.25rem;
+            border-radius: 10px;
+            font-family: var(--font-main);
+            font-weight: 600;
+            font-size: 0.9rem;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background-gradient: linear-gradient(135deg, var(--accent-primary), #2563eb);
+            background-color: var(--accent-primary);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Glass Cards */
+        .card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.75rem;
+            margin-bottom: 1.75rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        /* Grid metrics cards */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: transform 0.2s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .metric-data h3 {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-data p {
+            font-family: var(--font-title);
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+
+        .metric-icon {
+            width: 48px;
+            height: 48px;
+            background-color: var(--bg-tertiary);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            color: var(--accent-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .metric-card.success .metric-icon {
+            color: var(--accent-success);
+        }
+
+        /* Pipeline Simulator Styling */
+        .pipeline-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .pipeline-step {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+            transition: all 0.3s ease;
+        }
+
+        .pipeline-step.active {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 15px var(--accent-primary-glow);
+        }
+
+        .pipeline-step.completed {
+            border-color: var(--accent-success);
+            background-color: rgba(16, 185, 129, 0.02);
+        }
+
+        .step-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--bg-tertiary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 0.75rem auto;
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .pipeline-step.active .step-icon {
+            background-color: var(--accent-primary);
+            color: #fff;
+            border-color: var(--accent-primary);
+        }
+
+        .pipeline-step.completed .step-icon {
+            background-color: var(--accent-success);
+            color: #fff;
+            border-color: var(--accent-success);
+        }
+
+        .step-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .step-desc {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* Console styling */
+        .console-card {
+            background-color: #05070c;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.85rem;
+            color: #38bdf8;
+            max-height: 250px;
+            overflow-y: auto;
+            margin-bottom: 2rem;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.8);
+        }
+
+        .console-line {
+            margin-bottom: 0.4rem;
+            line-height: 1.4;
+        }
+
+        .console-line.success { color: var(--accent-success); }
+        .console-line.warning { color: var(--accent-warning); }
+        .console-line.error { color: var(--accent-danger); }
+        .console-line.info { color: var(--text-secondary); }
+
+        /* Tables explorer */
+        .explorer-tabs {
+            display: flex;
+            gap: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            color: #fff;
+            background-color: var(--bg-tertiary);
+        }
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.85rem;
+        }
+
+        th {
+            background-color: var(--bg-tertiary);
+            padding: 1rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--bg-secondary);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Quality Suite Panel */
+        .dq-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+
+        .dq-card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+
+        .dq-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .dq-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .dq-badge.pass {
+            background-color: var(--accent-success-glow);
+            color: var(--accent-success);
+        }
+
+        .dq-badge.fail {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--accent-danger);
+        }
+
+        .dq-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .dq-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            background-color: rgba(255,255,255,0.01);
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+
+        .dq-item.fail {
+            border-left: 3px solid var(--accent-warning);
+        }
+
+        /* SQL Sandbox */
+        .sql-textarea {
+            width: 100%;
+            height: 120px;
+            background-color: #05070c;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Courier New', Courier, monospace;
+            color: #34d399;
+            font-size: 0.9rem;
+            resize: none;
+            margin-bottom: 1rem;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .sql-templates {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .sql-template-btn {
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .sql-template-btn:hover {
+            color: #fff;
+            border-color: var(--accent-primary);
+        }
+
+        /* Views management */
+        .app-view {
+            display: none;
+        }
+
+        .app-view.active {
+            display: block;
+        }
+
+        /* Analytics View styling */
+        .chart-container {
+            position: relative;
+            height: 250px;
+            width: 100%;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <!-- Sidebar Navigation -->
+        <aside>
+            <div>
+                <div class="brand">
+                    <div class="brand-logo">
+                        <i class="fa-solid fa-database"></i>
+                    </div>
+                    <span class="brand-name">ShopFlow DWH</span>
+                </div>
+                
+                <nav class="nav-menu">
+                    <div class="nav-item active" onclick="switchView('pipeline')">
+                        <i class="fa-solid fa-network-wired"></i>
+                        <span>ETL Simulator</span>
+                    </div>
+                    <div class="nav-item" onclick="switchView('analytics')">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <span>Analytics DWH</span>
+                    </div>
+                    <div class="nav-item" onclick="switchView('explorer')">
+                        <i class="fa-solid fa-folder-open"></i>
+                        <span>Medallion Explorer</span>
+                    </div>
+                    <div class="nav-item" onclick="switchView('quality')">
+                        <i class="fa-solid fa-clipboard-check"></i>
+                        <span>Qualidade de Dados</span>
+                    </div>
+                    <div class="nav-item" onclick="switchView('sandbox')">
+                        <i class="fa-solid fa-terminal"></i>
+                        <span>SQL Sandbox</span>
+                    </div>
+                </nav>
+            </div>
+            
+            <div class="sidebar-footer">
+                <div class="status-badge">
+                    <div class="status-dot"></div>
+                    <span>DWH Local: Conectado</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main>
+            
+            <!-- ETL SIMULATOR VIEW -->
+            <div id="view-pipeline" class="app-view active">
+                <header>
+                    <div class="header-title">
+                        <h1>Simulador de Pipeline ETL</h1>
+                        <p>Acompanhe e execute o processamento batch Bronze → Silver → Gold em tempo real</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" onclick="resetSimulator()">
+                            <i class="fa-solid fa-rotate-left"></i> Resetar
+                        </button>
+                        <button class="btn btn-primary" id="btn-run" onclick="runPipelineSimulation()">
+                            <i class="fa-solid fa-play"></i> Rodar Pipeline
+                        </button>
+                    </div>
+                </header>
+
+                <div class="pipeline-container">
+                    <div class="pipeline-step" id="step-extract">
+                        <div class="step-icon"><i class="fa-solid fa-cloud-arrow-down"></i></div>
+                        <div class="step-title">1. Extract (Bronze)</div>
+                        <div class="step-desc">Consumir API & gerar transações</div>
+                    </div>
+                    <div class="pipeline-step" id="step-clean">
+                        <div class="step-icon"><i class="fa-solid fa-broom"></i></div>
+                        <div class="step-title">2. Transform (Silver)</div>
+                        <div class="step-desc">Higienizar e deduplicar dados</div>
+                    </div>
+                    <div class="pipeline-step" id="step-dq">
+                        <div class="step-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                        <div class="step-title">3. Data Quality</div>
+                        <div class="step-desc">Garantir integridade e schemas</div>
+                    </div>
+                    <div class="pipeline-step" id="step-load">
+                        <div class="step-icon"><i class="fa-solid fa-circle-check"></i></div>
+                        <div class="step-title">4. Load (Gold)</div>
+                        <div class="step-desc">Persistir tabelas de DWH</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2 style="font-family: var(--font-title); font-size: 1.25rem; margin-bottom: 1rem;">Logs do Processamento Batch</h2>
+                    <div class="console-card" id="console-logs">
+                        <div class="console-line info">[SISTEMA] Simulador ETL inicializado. Aguardando execução...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ANALYTICS VIEW -->
+            <div id="view-analytics" class="app-view">
+                <header>
+                    <div class="header-title">
+                        <h1>Analytics Data Warehouse (Gold)</h1>
+                        <p>Relatórios analíticos gerados a partir do Star Schema consolidado na camada Gold</p>
+                    </div>
+                </header>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-data">
+                            <h3>Faturamento Total</h3>
+                            <p id="metric-revenue">R$ 0,00</p>
+                        </div>
+                        <div class="metric-icon"><i class="fa-solid fa-money-bill-trend-up"></i></div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-data">
+                            <h3>Volume de Pedidos</h3>
+                            <p id="metric-orders">0</p>
+                        </div>
+                        <div class="metric-icon"><i class="fa-solid fa-cart-shopping"></i></div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-data">
+                            <h3>Clientes Ativos</h3>
+                            <p id="metric-customers">0</p>
+                        </div>
+                        <div class="metric-icon"><i class="fa-solid fa-users"></i></div>
+                    </div>
+                    <div class="metric-card success">
+                        <div class="metric-data">
+                            <h3>Ticket Médio</h3>
+                            <p id="metric-ticket">R$ 0,00</p>
+                        </div>
+                        <div class="metric-icon"><i class="fa-solid fa-receipt"></i></div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="card">
+                        <h2 style="font-family: var(--font-title); font-size: 1.1rem; margin-bottom: 1rem;">Faturamento por Categoria</h2>
+                        <div class="chart-container">
+                            <canvas id="chart-categories"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h2 style="font-family: var(--font-title); font-size: 1.1rem; margin-bottom: 1rem;">Distribuição por Segmento de Cliente</h2>
+                        <div class="chart-container">
+                            <canvas id="chart-segments"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MEDALLION EXPLORER VIEW -->
+            <div id="view-explorer" class="app-view">
+                <header>
+                    <div class="header-title">
+                        <h1>Medallion Explorer</h1>
+                        <p>Navegue pelas tabelas brutas, higienizadas e modeladas para entender o ciclo de vida do dado</p>
+                    </div>
+                </header>
+
+                <div class="explorer-tabs">
+                    <button class="tab-btn active" onclick="switchExplorerTab('bronze', this)">Bronze (Bruto)</button>
+                    <button class="tab-btn" onclick="switchExplorerTab('silver', this)">Silver (Higienizado)</button>
+                    <button class="tab-btn" onclick="switchExplorerTab('gold', this)">Gold (Modelado Star Schema)</button>
+                </div>
+
+                <div class="card">
+                    <div id="explorer-tables-container">
+                        <!-- Content loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- DATA QUALITY VIEW -->
+            <div id="view-quality" class="app-view">
+                <header>
+                    <div class="header-title">
+                        <h1>Painel de Qualidade de Dados</h1>
+                        <p>Status em tempo real das expectativas e verificações executadas na camada Silver</p>
+                    </div>
+                </header>
+
+                <div class="dq-grid" id="dq-suite-container">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+
+            <!-- SQL SANDBOX VIEW -->
+            <div id="view-sandbox" class="app-view">
+                <header>
+                    <div class="header-title">
+                        <h1>SQL Sandbox</h1>
+                        <p>Execute consultas analíticas diretamente nas tabelas Gold do Data Warehouse simulado</p>
+                    </div>
+                </header>
+
+                <div class="card">
+                    <div class="sql-templates">
+                        <button class="sql-template-btn" onclick="setSQLTemplate('revenue_by_category')">Faturamento por Categoria</button>
+                        <button class="sql-template-btn" onclick="setSQLTemplate('top_customers')">Top 5 Clientes por Compra</button>
+                        <button class="sql-template-btn" onclick="setSQLTemplate('clv_by_segment')">Ticket Médio por Segmento</button>
+                        <button class="sql-template-btn" onclick="setSQLTemplate('orders_by_state')">Distribuição Geográfica de Pedidos</button>
+                    </div>
+                    <textarea class="sql-textarea" id="sql-input">SELECT * FROM gold.fact_orders LIMIT 10;</textarea>
+                    <button class="btn btn-primary" onclick="executeSQLQuery()">
+                        <i class="fa-solid fa-play"></i> Executar Query
+                    </button>
+                </div>
+
+                <div class="card">
+                    <h2 style="font-family: var(--font-title); font-size: 1.1rem; margin-bottom: 1rem;">Resultado da Consulta</h2>
+                    <div class="table-responsive" id="sql-results-table">
+                        <p style="padding: 1.5rem; color: var(--text-secondary); text-align: center;">Execute uma consulta SQL acima para visualizar os dados.</p>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Data generation and simulation script -->
+    <script>
+        // --- DATA STORE ---
+        let rawData = { customers: [], products: [], orders: [] };
+        let cleanData = { customers: [], products: [], orders: [] };
+        let goldData = { dim_customer: [], dim_product: [], dim_date: [], fact_orders: [] };
+        let dqResults = [];
+        let simulationExecuted = false;
+
+        // E-Commerce Categories and fake items mapping
+        const CATEGORIES = {
+            "Electronics": ["Smartphone Galaxy", "Laptop Ultra", "Smartwatch Active", "Fone NoiseCanceling", "Tablet TabS"],
+            "Clothing": ["Camiseta Algodão", "Calça Jeans Slim", "Jaqueta Corta-Vento", "Tênis Running", "Meias Sport Pack"],
+            "Home & Garden": ["Liquidificador Turbo", "Cafeteira Express", "Luminária de Mesa", "Sofá Conforto", "Vaso Decorativo"],
+            "Sports": ["Tênis de Corrida", "Tapete Yoga", "Halter Emborrachado", "Garrafa Térmica", "Bicicleta Aro 29"]
+        };
+
+        const SEGMENTS = ["B2C", "B2B", "Premium", "Enterprise"];
+        const PAYMENT_METHODS = ["credit_card", "debit_card", "pix", "boleto", "wallet"];
+        const STATES = ["SP", "RJ", "MG", "PR", "SC", "RS", "BA", "PE", "CE", "DF"];
+
+        // --- VIEWS ROUTING ---
+        function switchView(viewName) {
+            document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            
+            document.getElementById(`view-${viewName}`).classList.add('active');
+            
+            // Highlight nav item
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                if (item.onclick.toString().includes(viewName)) {
+                    item.classList.add('active');
+                }
+            });
+
+            // Trigger specific view setups
+            if (viewName === 'analytics') {
+                renderAnalyticsView();
+            } else if (viewName === 'explorer') {
+                renderExplorerView();
+            } else if (viewName === 'quality') {
+                renderQualityView();
+            }
+        }
+
+        // --- CONSOLE LOGGER ---
+        function log(message, type = "info") {
+            const consoleBox = document.getElementById("console-logs");
+            const time = new Date().toLocaleTimeString();
+            const logLine = document.createElement("div");
+            logLine.className = `console-line ${type}`;
+            logLine.innerText = `[${time}] ${message}`;
+            consoleBox.appendChild(logLine);
+            consoleBox.scrollTop = consoleBox.scrollHeight;
+        }
+
+        // --- RESET SIMULATOR ---
+        function resetSimulator() {
+            rawData = { customers: [], products: [], orders: [] };
+            cleanData = { customers: [], products: [], orders: [] };
+            goldData = { dim_customer: [], dim_product: [], dim_date: [], fact_orders: [] };
+            dqResults = [];
+            simulationExecuted = false;
+
+            document.querySelectorAll('.pipeline-step').forEach(step => {
+                step.className = 'pipeline-step';
+            });
+            document.getElementById("btn-run").disabled = false;
+            
+            const consoleBox = document.getElementById("console-logs");
+            consoleBox.innerHTML = '<div class="console-line info">[SISTEMA] Simulador ETL reinicializado. Aguardando execução...</div>';
+            
+            log("Tabelas temporárias dropadas e credenciais limpas.", "info");
+        }
+
+        // --- SIMULATE PROCESS ---
+        async function runPipelineSimulation() {
+            resetSimulator();
+            document.getElementById("btn-run").disabled = true;
+
+            // Step 1: Extraction (Bronze)
+            document.getElementById("step-extract").classList.add("active");
+            log("Iniciando Fase 1: EXTRAÇÃO de dados...", "info");
+            await delay(1200);
+            
+            // Run Ingestion
+            log("Consumindo produtos via REST API: https://fakestoreapi.com/products ...", "info");
+            log("API retornou status HTTP 200 OK. Mapeando 20 produtos.", "success");
+            
+            log("Gerando transações de clientes simulando base de dados...", "info");
+            generateBronzeData();
+            log(`Bronze raw customers: ${rawData.customers.length} registros injetados.`, "success");
+            log(`Bronze raw products: ${rawData.products.length} registros (incluindo API).`, "success");
+            log(`Bronze raw orders: ${rawData.orders.length} pedidos brutos gerados.`, "success");
+            
+            document.getElementById("step-extract").classList.remove("active");
+            document.getElementById("step-extract").classList.add("completed");
+
+            // Step 2: Clean (Silver)
+            document.getElementById("step-clean").classList.add("active");
+            log("Iniciando Fase 2: TRANSFORMAÇÃO & LIMPEZA (Bronze -> Silver)...", "info");
+            await delay(1500);
+
+            cleanBronzeToSilver();
+            log("Removendo duplicadas de emails de clientes...", "info");
+            log("Limpando strings e convertendo preços brutos para decimais...", "info");
+            log("Recalculando valores finais baseados nas regras de descontos...", "info");
+            log("Compactando dados da camada Silver em formato Parquet...", "success");
+
+            document.getElementById("step-clean").classList.remove("active");
+            document.getElementById("step-clean").classList.add("completed");
+
+            // Step 3: Data Quality Checker
+            document.getElementById("step-dq").classList.add("active");
+            log("Iniciando Fase 3: CONTROLE DE QUALIDADE DE DADOS...", "info");
+            await delay(1200);
+
+            runQualityChecks();
+            const failedDQ = dqResults.filter(r => !r.passed);
+            log(`Data Quality Suite completa: 32 checks executados.`, "info");
+            
+            if (failedDQ.length > 0) {
+                log(`Avisos de qualidade de dados gerados: ${failedDQ.length} checks não atingiram a nota máxima.`, "warning");
+                failedDQ.forEach(f => {
+                    log(`  Check [${f.check_name}] em ${f.table_name}: ${f.details}`, "warning");
+                });
+            } else {
+                log("Todos os checks analíticos de integridade passaram com 100% de sucesso!", "success");
+            }
+
+            document.getElementById("step-dq").classList.remove("active");
+            document.getElementById("step-dq").classList.add("completed");
+
+            // Step 4: Load (Gold)
+            document.getElementById("step-load").classList.add("active");
+            log("Iniciando Fase 4: MODELAGEM DIMENSIONAL & CARREGAMENTO (Silver -> Gold)...", "info");
+            await delay(1500);
+
+            buildGoldDataWarehouse();
+            log("Criando surrogate keys na dim_customer (SCD Tipo 2) e dim_product...", "info");
+            log("Gerando tabela dimensional de datas analíticas (dim_date)...", "info");
+            log("Executando DDL schemas e fazendo Upserts na fact_orders...", "info");
+            log("DW PostgreSQL local recarregado com dados Gold analíticos.", "success");
+
+            document.getElementById("step-load").classList.remove("active");
+            document.getElementById("step-load").classList.add("completed");
+            
+            simulationExecuted = true;
+            log("PROCESSO ETL DE PONTA A PONTA COMPLETO COM SUCESSO!", "success");
+            document.getElementById("btn-run").disabled = false;
+        }
+
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // --- DATA GENERATORS ---
+        function generateBronzeData() {
+            // Generate customers (with duplicates and some nulls)
+            rawData.customers = [];
+            const emailsList = [];
+            for (let i = 1; i <= 100; i++) {
+                const first = ["João", "Maria", "Carlos", "Ana", "Bruno", "Luiza", "Gabriel", "Julia", "Marcos", "Fernanda"][Math.floor(Math.random() * 10)];
+                const last = ["Silva", "Oliveira", "Santos", "Souza", "Lima", "Pereira", "Costa", "Carvalho", "Melo", "Almeida"][Math.floor(Math.random() * 10)];
+                let email = `${first.toLowerCase()}.${last.toLowerCase()}@free-email.com`;
+                
+                // Inject duplicate emails (2%)
+                if (i > 95) {
+                    email = emailsList[Math.floor(Math.random() * emailsList.length)];
+                } else {
+                    emailsList.push(email);
+                }
+
+                rawData.customers.push({
+                    customer_id: `cust-${1000 + i}`,
+                    first_name: `  ${first} `,  // leading/trailing whitespace
+                    last_name: `${last}  `,
+                    email: i === 50 ? "email_invalido.com" : email, // invalid email
+                    phone: i % 10 === 0 ? null : `(11) 9${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`,
+                    city: ["São Paulo", "Rio de Janeiro", "Belo Horizonte", "Curitiba", "Porto Alegre"][Math.floor(Math.random() * 5)],
+                    state: STATES[Math.floor(Math.random() * 5)],
+                    segment: SEGMENTS[Math.floor(Math.random() * 4)],
+                    registration_date: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
+                });
+            }
+
+            // Generate products
+            rawData.products = [];
+            let prodId = 1;
+            for (const [cat, items] of Object.entries(CATEGORIES)) {
+                items.forEach(name => {
+                    const price = parseFloat((30 + Math.random() * 1200).toFixed(2));
+                    // Inject negative prices (1%)
+                    const finalPrice = prodId === 8 ? -price : price;
+                    rawData.products.push({
+                        product_id: `prod-${100 + prodId}`,
+                        name: name,
+                        category: cat,
+                        price: finalPrice,
+                        cost_price: parseFloat((finalPrice * 0.6).toFixed(2)),
+                        stock_quantity: prodId % 12 === 0 ? null : Math.floor(Math.random() * 300)
+                    });
+                    prodId++;
+                });
+            }
+
+            // Generate orders
+            rawData.orders = [];
+            for (let i = 1; i <= 250; i++) {
+                const cust = rawData.customers[Math.floor(Math.random() * rawData.customers.length)];
+                const prod = rawData.products[Math.floor(Math.random() * rawData.products.length)];
+                const qty = Math.floor(1 + Math.random() * 4);
+                const discount = Math.random() < 0.3 ? 10.0 : 0.0;
+                
+                // order date within last 6 months
+                const orderDaysAgo = Math.random() * 180;
+                const orderDate = new Date(Date.now() - orderDaysAgo * 24 * 60 * 60 * 1000);
+                
+                // Inject future order date (0.5%)
+                if (i === 150) {
+                    orderDate.setDate(orderDate.getDate() + 30);
+                }
+
+                rawData.orders.push({
+                    order_id: `ord-${10000 + i}`,
+                    customer_id: cust.customer_id,
+                    product_id: prod.product_id,
+                    quantity: i === 120 ? -2 : qty, // negative quantity
+                    unit_price: prod.price,
+                    discount_percent: discount,
+                    total_amount: 0, // will calculate in transform
+                    order_date: orderDate.toISOString(),
+                    status: ["completed", "pending", "shipped", "cancelled", "Completed"][Math.floor(Math.random() * 5)],
+                    payment_method: PAYMENT_METHODS[Math.floor(Math.random() * 5)],
+                    shipping_cost: parseFloat((Math.random() * 25).toFixed(2))
+                });
+            }
+        }
+
+        function cleanBronzeToSilver() {
+            // Customers clean
+            const emailsSeen = new Set();
+            cleanData.customers = [];
+            
+            rawData.customers.forEach(c => {
+                // 1. Clean email & format names
+                let email = c.email.trim().toLowerCase();
+                const isValidEmail = email.includes("@") && email.includes(".");
+                if (!isValidEmail) email = null;
+
+                // 2. Deduplicate by email
+                if (email && emailsSeen.has(email)) return;
+                if (email) emailsSeen.add(email);
+
+                const cleanedCust = {
+                    ...c,
+                    first_name: c.first_name.trim(),
+                    last_name: c.last_name.trim(),
+                    email: email,
+                    phone: c.phone || "N/A",
+                    segment: c.segment.toLowerCase(),
+                    processed_at: new Date().toISOString()
+                };
+                cleanData.customers.push(cleanedCust);
+            });
+
+            // Products clean
+            cleanData.products = [];
+            rawData.products.forEach(p => {
+                const price = Math.abs(p.price); // absolute prices
+                const cost = Math.abs(p.cost_price);
+                cleanData.products.push({
+                    ...p,
+                    price: price,
+                    cost_price: cost >= price ? parseFloat((price * 0.7).toFixed(2)) : cost,
+                    stock_quantity: p.stock_quantity || 0,
+                    category: p.category.toLowerCase(),
+                    processed_at: new Date().toISOString()
+                });
+            });
+
+            // Orders clean
+            cleanData.orders = [];
+            const custIds = new Set(cleanData.customers.map(c => c.customer_id));
+            const prodIds = new Set(cleanData.products.map(p => p.product_id));
+
+            rawData.orders.forEach(o => {
+                // 1. Verify foreign keys
+                if (!custIds.has(o.customer_id) || !prodIds.has(o.product_id)) return;
+
+                // 2. Fix future dates
+                let oDate = new Date(o.order_date);
+                if (oDate > new Date()) {
+                    oDate = new Date();
+                }
+
+                // 3. Fix negative quantity
+                const qty = Math.max(1, Math.abs(o.quantity));
+                const price = Math.abs(o.unit_price);
+                const total = parseFloat((qty * price * (1 - o.discount_percent / 100)).toFixed(2));
+
+                cleanData.orders.push({
+                    ...o,
+                    quantity: qty,
+                    unit_price: price,
+                    total_amount: total,
+                    order_date: oDate.toISOString(),
+                    status: o.status.toLowerCase() === "completed" ? "completed" : o.status.toLowerCase(),
+                    processed_at: new Date().toISOString()
+                });
+            });
+        }
+
+        function runQualityChecks() {
+            dqResults = [];
+            
+            // Completeness check on Customer IDs
+            const custIdsNull = cleanData.customers.filter(c => !c.customer_id).length;
+            dqResults.push({
+                table_name: "customers",
+                check_name: "completeness_customer_id",
+                passed: custIdsNull === 0,
+                details: `0/100 nulos. Nota de completude: 100%`
+            });
+
+            // Completeness check on Emails (Cleaned has some nulls from invalid emails)
+            const emailsNull = cleanData.customers.filter(c => !c.email).length;
+            const emailCompleteness = ((cleanData.customers.length - emailsNull) / cleanData.customers.length * 100).toFixed(1);
+            dqResults.push({
+                table_name: "customers",
+                check_name: "completeness_email",
+                passed: parseFloat(emailCompleteness) >= 95.0,
+                details: `${emailsNull}/${cleanData.customers.length} nulos ou inválidos. Nota: ${emailCompleteness}% (Threshold: 95.0%)`
+            });
+
+            // Uniqueness check on Customer IDs
+            const custIdsSet = new Set(cleanData.customers.map(c => c.customer_id));
+            dqResults.push({
+                table_name: "customers",
+                check_name: "uniqueness_customer_id",
+                passed: custIdsSet.size === cleanData.customers.length,
+                details: `Todos os ${cleanData.customers.length} IDs de clientes são únicos.`
+            });
+
+            // Uniqueness check on Emails
+            const emails = cleanData.customers.map(c => c.email).filter(Boolean);
+            const emailsSet = new Set(emails);
+            dqResults.push({
+                table_name: "customers",
+                check_name: "uniqueness_email",
+                passed: emails.length === emailsSet.size,
+                details: `Emails higienizados válidos: ${emails.length} únicos.`
+            });
+
+            // Product rating range check
+            const invalidRatings = cleanData.products.filter(p => p.rating && (p.rating < 1.0 || p.rating > 5.0)).length;
+            dqResults.push({
+                table_name: "products",
+                check_name: "range_rating",
+                passed: invalidRatings === 0,
+                details: `Todas as avaliações estão entre 1.0 e 5.0.`
+            });
+
+            // Orders status allowed values check
+            const allowedStatuses = ["completed", "pending", "shipped", "cancelled", "returned"];
+            const invalidStatuses = cleanData.orders.filter(o => !allowedStatuses.includes(o.status)).length;
+            dqResults.push({
+                table_name: "orders",
+                check_name: "allowed_values_status",
+                passed: invalidStatuses === 0,
+                details: `Todos os status pertencem à lista: ${allowedStatuses.join(", ")}`
+            });
+        }
+
+        function buildGoldDataWarehouse() {
+            // dim_customer (SCD Type 2 setup)
+            goldData.dim_customer = cleanData.customers.map((c, index) => ({
+                customer_key: index + 1,
+                customer_id: c.customer_id,
+                first_name: c.first_name,
+                last_name: c.last_name,
+                email: c.email,
+                phone: c.phone,
+                city: c.city,
+                state: c.state,
+                segment: c.segment.toUpperCase(),
+                valid_from: "2024-01-01",
+                valid_to: "9999-12-31",
+                is_current: true
+            }));
+
+            // dim_product
+            goldData.dim_product = cleanData.products.map((p, index) => {
+                const margin = ((p.price - p.cost_price) / p.price * 100).toFixed(2);
+                let range = "Budget";
+                if (p.price > 750) range = "Luxury";
+                else if (p.price > 250) range = "Premium";
+                else if (p.price > 70) range = "Mid-Range";
+                
+                return {
+                    product_key: index + 1,
+                    product_id: p.product_id,
+                    name: p.name,
+                    category: p.category.toUpperCase(),
+                    price: p.price,
+                    cost_price: p.cost_price,
+                    price_range: range,
+                    margin_percent: parseFloat(margin),
+                    stock_quantity: p.stock_quantity
+                };
+            });
+
+            // dim_date
+            const dateKeys = new Set(cleanData.orders.map(o => new Date(o.order_date).toISOString().split("T")[0]));
+            goldData.dim_date = Array.from(dateKeys).map(dtStr => {
+                const dt = new Date(dtStr);
+                const dateKey = parseInt(dtStr.replace(/-/g, ""));
+                return {
+                    date_key: dateKey,
+                    full_date: dtStr,
+                    day_of_week: dt.getDay(),
+                    day_name: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][dt.getDay()],
+                    day_of_month: dt.getDate(),
+                    month: dt.getMonth() + 1,
+                    month_name: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][dt.getMonth()],
+                    quarter: Math.floor(dt.getMonth() / 3) + 1,
+                    year: dt.getFullYear(),
+                    is_weekend: [0, 6].includes(dt.getDay())
+                };
+            });
+
+            // Sort dates
+            goldData.dim_date.sort((a, b) => a.date_key - b.date_key);
+
+            // fact_orders
+            const custKeyMap = Object.fromEntries(goldData.dim_customer.map(c => [c.customer_id, c.customer_key]));
+            const prodKeyMap = Object.fromEntries(goldData.dim_product.map(p => [p.product_id, p.product_key]));
+            
+            goldData.fact_orders = cleanData.orders.map((o, index) => {
+                const dateKey = parseInt(new Date(o.order_date).toISOString().split("T")[0].replace(/-/g, ""));
+                const discAmt = parseFloat((o.quantity * o.unit_price * (o.discount_percent / 100)).toFixed(2));
+                return {
+                    order_key: index + 1,
+                    order_id: o.order_id,
+                    customer_key: custKeyMap[o.customer_id] || -1,
+                    product_key: prodKeyMap[o.product_id] || -1,
+                    date_key: dateKey,
+                    quantity: o.quantity,
+                    unit_price: o.unit_price,
+                    discount_percent: o.discount_percent,
+                    discount_amount: discAmt,
+                    total_amount: o.total_amount,
+                    net_amount: parseFloat((o.total_amount - discAmt).toFixed(2)),
+                    shipping_cost: o.shipping_cost,
+                    payment_method: o.payment_method,
+                    order_status: o.status
+                };
+            });
+        }
+
+        // --- ANALYTICS RENDERING ---
+        let chartCategoriesInstance = null;
+        let chartSegmentsInstance = null;
+
+        function renderAnalyticsView() {
+            if (!simulationExecuted) {
+                alert("Por favor, execute o pipeline no ETL Simulator primeiro!");
+                switchView('pipeline');
+                return;
+            }
+
+            // Calculate Metrics
+            const totalRevenue = goldData.fact_orders.reduce((sum, o) => sum + o.total_amount, 0);
+            const totalOrders = goldData.fact_orders.length;
+            const activeCust = goldData.dim_customer.length;
+            const avgTicket = totalOrders > 0 ? (totalRevenue / totalOrders) : 0;
+
+            document.getElementById("metric-revenue").innerText = `R$ ${totalRevenue.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById("metric-orders").innerText = totalOrders;
+            document.getElementById("metric-customers").innerText = activeCust;
+            document.getElementById("metric-ticket").innerText = `R$ ${avgTicket.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+            // Aggregate Category Data
+            const catSales = {};
+            const prodKeyToCat = Object.fromEntries(goldData.dim_product.map(p => [p.product_key, p.category]));
+            goldData.fact_orders.forEach(o => {
+                const cat = prodKeyToCat[o.product_key] || "DESCONHECIDO";
+                catSales[cat] = (catSales[cat] || 0) + o.total_amount;
+            });
+
+            // Aggregate Segments Data
+            const segCounts = {};
+            goldData.dim_customer.forEach(c => {
+                segCounts[c.segment] = (segCounts[c.segment] || 0) + 1;
+            });
+
+            // Render Charts
+            const ctxCat = document.getElementById('chart-categories').getContext('2d');
+            const ctxSeg = document.getElementById('chart-segments').getContext('2d');
+
+            if (chartCategoriesInstance) chartCategoriesInstance.destroy();
+            if (chartSegmentsInstance) chartSegmentsInstance.destroy();
+
+            Chart.defaults.color = '#9ca3af';
+            Chart.defaults.font.family = 'Plus Jakarta Sans';
+
+            chartCategoriesInstance = new Chart(ctxCat, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(catSales),
+                    datasets: [{
+                        label: 'Vendas Totais (R$)',
+                        data: Object.values(catSales),
+                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'],
+                        borderWidth: 0,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            chartSegmentsInstance = new Chart(ctxSeg, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(segCounts),
+                    datasets: [{
+                        data: Object.values(segCounts),
+                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ec4899'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right' } }
+                }
+            });
+        }
+
+        // --- EXPLORER VIEW ---
+        let currentTab = 'bronze';
+
+        function switchExplorerTab(tabName, btn) {
+            currentTab = tabName;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderExplorerView();
+        }
+
+        function renderExplorerView() {
+            const container = document.getElementById("explorer-tables-container");
+            if (!simulationExecuted) {
+                container.innerHTML = '<p style="padding: 1.5rem; color: var(--text-secondary); text-align: center;">Execute o pipeline ETL primeiro para visualizar os dados de cada camada.</p>';
+                return;
+            }
+
+            let html = "";
+            if (currentTab === 'bronze') {
+                html = `
+                    <h3 style="margin-bottom:1rem; font-size:1.1rem;">Bronze Raw Orders (Primeiros 8 registros)</h3>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID Pedido</th>
+                                    <th>ID Cliente</th>
+                                    <th>ID Produto</th>
+                                    <th>Qtd</th>
+                                    <th>Valor Unitário</th>
+                                    <th>Status Original</th>
+                                    <th>Data Pedido</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rawData.orders.slice(0, 8).map(o => `
+                                    <tr>
+                                        <td>${o.order_id}</td>
+                                        <td>${o.customer_id}</td>
+                                        <td>${o.product_id}</td>
+                                        <td style="${o.quantity <= 0 ? 'color: var(--accent-danger); font-weight:bold;' : ''}">${o.quantity}</td>
+                                        <td>R$ ${o.unit_price.toFixed(2)}</td>
+                                        <td><span class="dq-badge fail" style="font-size:0.7rem;">${o.status}</span></td>
+                                        <td>${o.order_date}</td>
+                                    </tr>
+                                `).join("")}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else if (currentTab === 'silver') {
+                html = `
+                    <h3 style="margin-bottom:1rem; font-size:1.1rem;">Silver Cleaned Orders (Primeiros 8 registros)</h3>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID Pedido</th>
+                                    <th>ID Cliente</th>
+                                    <th>ID Produto</th>
+                                    <th>Qtd Higienizada</th>
+                                    <th>Preço Higienizado</th>
+                                    <th>Valor Total</th>
+                                    <th>Status Limpo</th>
+                                    <th>Data Limpa</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${cleanData.orders.slice(0, 8).map(o => `
+                                    <tr>
+                                        <td>${o.order_id}</td>
+                                        <td>${o.customer_id}</td>
+                                        <td>${o.product_id}</td>
+                                        <td>${o.quantity}</td>
+                                        <td>R$ ${o.unit_price.toFixed(2)}</td>
+                                        <td style="font-weight:600; color:var(--accent-success);">R$ ${o.total_amount.toFixed(2)}</td>
+                                        <td><span class="dq-badge pass" style="font-size:0.7rem;">${o.status}</span></td>
+                                        <td>${o.order_date.split("T")[0]}</td>
+                                    </tr>
+                                `).join("")}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else if (currentTab === 'gold') {
+                html = `
+                    <h3 style="margin-bottom:1rem; font-size:1.1rem;">Gold Tabela Fato: fact_orders (Primeiros 8 registros)</h3>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Chave Fato</th>
+                                    <th>Chave Cliente (FK)</th>
+                                    <th>Chave Produto (FK)</th>
+                                    <th>Chave Data (FK)</th>
+                                    <th>Qtd</th>
+                                    <th>Total Bruto</th>
+                                    <th>Desconto</th>
+                                    <th>Líquido</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${goldData.fact_orders.slice(0, 8).map(o => `
+                                    <tr>
+                                        <td>${o.order_key}</td>
+                                        <td style="font-weight:600; color:var(--accent-primary);">${o.customer_key}</td>
+                                        <td style="font-weight:600; color:var(--accent-warning);">${o.product_key}</td>
+                                        <td>${o.date_key}</td>
+                                        <td>${o.quantity}</td>
+                                        <td>R$ ${o.total_amount.toFixed(2)}</td>
+                                        <td>R$ ${o.discount_amount.toFixed(2)}</td>
+                                        <td style="font-weight:600; color:var(--accent-success);">R$ ${o.net_amount.toFixed(2)}</td>
+                                        <td>${o.order_status}</td>
+                                    </tr>
+                                `).join("")}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        // --- QUALITY SUITE RENDERING ---
+        function renderQualityView() {
+            const container = document.getElementById("dq-suite-container");
+            if (!simulationExecuted) {
+                container.innerHTML = '<p style="grid-column: span 2; padding: 1.5rem; color: var(--text-secondary); text-align: center;">Execute o pipeline ETL primeiro para visualizar o status do painel de qualidade.</p>';
+                return;
+            }
+
+            // Group results by table
+            const groups = {};
+            dqResults.forEach(r => {
+                groups[r.table_name] = groups[r.table_name] || [];
+                groups[r.table_name].push(r);
+            });
+
+            let html = "";
+            for (const [table, checks] of Object.entries(groups)) {
+                const passedAll = checks.every(c => c.passed);
+                html += `
+                    <div class="dq-card">
+                        <div class="dq-header">
+                            <span>Tabela: ${table.toUpperCase()}</span>
+                            <span class="dq-badge ${passedAll ? 'pass' : 'fail'}">${passedAll ? 'Integra' : 'Com Avisos'}</span>
+                        </div>
+                        <div class="dq-list">
+                            ${checks.map(c => `
+                                <div class="dq-item ${c.passed ? '' : 'fail'}">
+                                    <span>${c.check_name}</span>
+                                    <span style="font-weight:bold; color:${c.passed ? 'var(--accent-success)' : 'var(--accent-warning)'}">${c.passed ? 'PASS' : 'WARN'}</span>
+                                </div>
+                                <div style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.4rem; padding-left:0.5rem;">
+                                    ${c.details}
+                                </div>
+                            `).join("")}
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        // --- SQL SANDBOX EXECUTION ---
+        const SQL_TEMPLATES = {
+            "revenue_by_category": "SELECT category, SUM(total_amount) AS faturamento_total, COUNT(order_key) AS quantidade_vendas\nFROM gold.fact_orders f\nJOIN gold.dim_product p ON f.product_key = p.product_key\nGROUP BY category\nORDER BY faturamento_total DESC;",
+            
+            "top_customers": "SELECT c.first_name || ' ' || c.last_name AS cliente, SUM(f.total_amount) AS total_comprado\nFROM gold.fact_orders f\nJOIN gold.dim_customer c ON f.customer_key = c.customer_key\nGROUP BY cliente\nORDER BY total_comprado DESC\nLIMIT 5;",
+            
+            "clv_by_segment": "SELECT segment AS segmento_cliente, AVG(total_amount) AS ticket_medio, SUM(total_amount) AS faturamento_acumulado\nFROM gold.fact_orders f\nJOIN gold.dim_customer c ON f.customer_key = c.customer_key\nGROUP BY segmento_cliente\nORDER BY ticket_medio DESC;",
+            
+            "orders_by_state": "SELECT c.state AS estado, COUNT(order_key) AS volume_pedidos, SUM(total_amount) AS faturamento_estado\nFROM gold.fact_orders f\nJOIN gold.dim_customer c ON f.customer_key = c.customer_key\nGROUP BY estado\nORDER BY volume_pedidos DESC;"
+        };
+
+        function setSQLTemplate(name) {
+            if (SQL_TEMPLATES[name]) {
+                document.getElementById("sql-input").value = SQL_TEMPLATES[name];
+            }
+        }
+
+        function executeSQLQuery() {
+            if (!simulationExecuted) {
+                alert("Por favor, execute o pipeline no ETL Simulator primeiro!");
+                return;
+            }
+
+            const query = document.getElementById("sql-input").value.trim().toLowerCase();
+            const resultsTable = document.getElementById("sql-results-table");
+            
+            let data = [];
+            let headers = [];
+
+            if (query.includes("sum(total_amount)") && query.includes("category")) {
+                // Revenue by category aggregation
+                const catSales = {};
+                const catCounts = {};
+                const prodKeyToCat = Object.fromEntries(goldData.dim_product.map(p => [p.product_key, p.category]));
+                
+                goldData.fact_orders.forEach(o => {
+                    const cat = prodKeyToCat[o.product_key] || "DESCONHECIDO";
+                    catSales[cat] = (catSales[cat] || 0) + o.total_amount;
+                    catCounts[cat] = (catCounts[cat] || 0) + 1;
+                });
+
+                headers = ["category", "faturamento_total", "quantidade_vendas"];
+                data = Object.keys(catSales).map(cat => ({
+                    category: cat,
+                    faturamento_total: `R$ ${catSales[cat].toFixed(2)}`,
+                    quantidade_vendas: catCounts[cat]
+                }));
+            } else if (query.includes("top 5") || (query.includes("limit 5") && query.includes("customer"))) {
+                // Top customers
+                const custSales = {};
+                const custKeyToName = Object.fromEntries(goldData.dim_customer.map(c => [c.customer_key, `${c.first_name} ${c.last_name}`]));
+                
+                goldData.fact_orders.forEach(o => {
+                    const name = custKeyToName[o.customer_key] || "Desconhecido";
+                    custSales[name] = (custSales[name] || 0) + o.total_amount;
+                });
+
+                headers = ["cliente", "total_comprado"];
+                data = Object.keys(custSales)
+                    .map(name => ({ cliente: name, total_comprado: custSales[name] }))
+                    .sort((a, b) => b.total_comprado - a.total_comprado)
+                    .slice(0, 5)
+                    .map(item => ({ cliente: item.cliente, total_comprado: `R$ ${item.total_comprado.toFixed(2)}` }));
+            } else if (query.includes("segment")) {
+                // ticket medio por segmento
+                const segSales = {};
+                const segCounts = {};
+                const custKeyToSeg = Object.fromEntries(goldData.dim_customer.map(c => [c.customer_key, c.segment]));
+
+                goldData.fact_orders.forEach(o => {
+                    const seg = custKeyToSeg[o.customer_key] || "B2C";
+                    segSales[seg] = (segSales[seg] || 0) + o.total_amount;
+                    segCounts[seg] = (segCounts[seg] || 0) + 1;
+                });
+
+                headers = ["segmento_cliente", "ticket_medio", "faturamento_acumulado"];
+                data = Object.keys(segSales).map(seg => ({
+                    segmento_cliente: seg,
+                    ticket_medio: `R$ ${(segSales[seg] / segCounts[seg]).toFixed(2)}`,
+                    faturamento_acumulado: `R$ ${segSales[seg].toFixed(2)}`
+                })).sort((a,b) => parseFloat(b.ticket_medio.replace("R$ ","")) - parseFloat(a.ticket_medio.replace("R$ ","")));
+            } else if (query.includes("state") || query.includes("estado")) {
+                // sales by state
+                const stateSales = {};
+                const stateCounts = {};
+                const custKeyToState = Object.fromEntries(goldData.dim_customer.map(c => [c.customer_key, c.state]));
+
+                goldData.fact_orders.forEach(o => {
+                    const state = custKeyToState[o.customer_key] || "SP";
+                    stateSales[state] = (stateSales[state] || 0) + o.total_amount;
+                    stateCounts[state] = (stateCounts[state] || 0) + 1;
+                });
+
+                headers = ["estado", "volume_pedidos", "faturamento_estado"];
+                data = Object.keys(stateSales).map(st => ({
+                    estado: st,
+                    volume_pedidos: stateCounts[st],
+                    faturamento_estado: `R$ ${stateSales[st].toFixed(2)}`
+                })).sort((a, b) => b.volume_pedidos - a.volume_pedidos);
+            } else {
+                // Default select limit 10
+                headers = ["order_key", "order_id", "customer_key", "product_key", "total_amount", "net_amount", "order_status"];
+                data = goldData.fact_orders.slice(0, 10).map(o => ({
+                    order_key: o.order_key,
+                    order_id: o.order_id,
+                    customer_key: o.customer_key,
+                    product_key: o.product_key,
+                    total_amount: `R$ ${o.total_amount.toFixed(2)}`,
+                    net_amount: `R$ ${o.net_amount.toFixed(2)}`,
+                    order_status: o.order_status
+                }));
+            }
+
+            // Build result table HTML
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            ${headers.map(h => `<th>${h}</th>`).join("")}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(row => `
+                            <tr>
+                                ${headers.map(h => `<td>${row[h]}</td>`).join("")}
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            `;
+            resultsTable.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

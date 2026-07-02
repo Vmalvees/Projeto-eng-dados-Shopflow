@@ -1,0 +1,123 @@
+version: '3.8'
+x-airflow-common:
+  &airflow-common
+  image: apache/airflow:2.8.1-python3.11
+  environment:
+    - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+    - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow_db
+    - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow_db
+    - AIRFLOW__CORE__FERNET_KEY=46b1UfeJ6uq7kqcv4rC8Wv758-C39_W48-Z87_C98_Q=
+    - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    - AIRFLOW__WEBSERVER__EXPOSE_CONFIG=True
+    # AWS configs inside container pointing to local MinIO
+    - AWS_ACCESS_KEY_ID=minioadmin
+    - AWS_SECRET_ACCESS_KEY=minioadmin
+    - AWS_DEFAULT_REGION=us-east-1
+    - S3_BUCKET_NAME=shopflow-data-lake
+    - RDS_HOST=postgres
+    - RDS_PORT=5432
+    - RDS_DATABASE=shopflow_dw
+    - RDS_USER=postgres
+    - RDS_PASSWORD=postgres
+    - ENVIRONMENT=development
+    - LOG_LEVEL=INFO
+    - DATA_VOLUME=1000
+    - PYTHONPATH=/opt/airflow
+  volumes:
+    - ../airflow/dags:/opt/airflow/dags
+    - ../src:/opt/airflow/src
+    - ../data:/opt/airflow/data
+    - ../logs:/opt/airflow/logs
+  depends_on:
+    postgres:
+      condition: service_healthy
+  networks:
+    - etl-net
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=shopflow_dw
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - etl-net
+
+  minio:
+    image: minio/minio:RELEASE.2023-11-20T22-40-07Z
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - minio-volume:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - etl-net
+
+  createbuckets:
+    image: minio/mc:RELEASE.2023-11-20T22-45-42Z
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      /usr/bin/mc mb myminio/shopflow-data-lake || true;
+      exit 0;
+      "
+    networks:
+      - etl-net
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    restart: always
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    restart: always
+
+  airflow-init:
+    <<: *airflow-common
+    command: version
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db init
+        airflow users create \
+          --username admin \
+          --firstname Data \
+          --lastname Engineer \
+          --role Admin \
+          --email admin@shopflow.com \
+          --password admin
+
+volumes:
+  postgres-db-volume:
+  minio-volume:
+
+networks:
+  etl-net:
+    driver: bridge

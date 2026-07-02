@@ -1,0 +1,22 @@
+{
+  "table_name": "orders",
+  "checks": {
+    "completeness": {
+      "columns": ["order_id", "customer_id", "product_id", "quantity", "unit_price", "total_amount", "order_date"],
+      "threshold": 0.98
+    },
+    "uniqueness": {
+      "columns": ["order_id"]
+    },
+    "ranges": {
+      "quantity": [1, 100],
+      "unit_price": [0.01, 10000.0],
+      "discount_percent": [0.0, 100.0],
+      "total_amount": [0.01, 1000000.0]
+    },
+    "allowed_values": {
+      "status": ["completed", "pending", "shipped", "cancelled", "returned"],
+      "payment_method": ["credit_card", "debit_card", "pix", "boleto", "wallet"]
+    }
+  }
+}

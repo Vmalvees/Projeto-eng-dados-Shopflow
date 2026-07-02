@@ -1,0 +1,17 @@
+{
+  "table_name": "products",
+  "checks": {
+    "completeness": {
+      "columns": ["product_id", "name", "category", "price", "cost_price"],
+      "threshold": 0.98
+    },
+    "uniqueness": {
+      "columns": ["product_id", "sku"]
+    },
+    "ranges": {
+      "price": [0.01, 10000.0],
+      "cost_price": [0.01, 8000.0],
+      "rating": [1.0, 5.0]
+    }
+  }
+}

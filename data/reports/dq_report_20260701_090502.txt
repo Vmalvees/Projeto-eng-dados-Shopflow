@@ -1,0 +1,52 @@
+============================================================
+DATA QUALITY CHECK REPORT
+Generated: 2026-07-01 09:05:02
+------------------------------------------------------------
+Total Checks  : 32
+Passed Checks : 31 (96.9% if len(results) > 0 else 100%)
+Failed Checks : 1
+============================================================
+
+Detailed Results:
+
+Table: CUSTOMERS
+------------------------------
+  [PASS] completeness_customer_id
+  [PASS] completeness_first_name
+  [PASS] completeness_last_name
+  [FAIL] completeness_email
+     Details: {'column': 'email', 'total_rows': 98, 'non_null_count': np.int64(60), 'null_count': np.int64(38), 'actual_percentage': np.float64(61.22), 'threshold_percentage': 95.0}
+  [PASS] completeness_registration_date
+  [PASS] uniqueness_customer_id
+  [PASS] uniqueness_email
+  [PASS] allowed_values_segment
+
+Table: PRODUCTS
+------------------------------
+  [PASS] completeness_product_id
+  [PASS] completeness_name
+  [PASS] completeness_category
+  [PASS] completeness_price
+  [PASS] completeness_cost_price
+  [PASS] uniqueness_product_id
+  [PASS] uniqueness_sku
+  [PASS] range_price
+  [PASS] range_cost_price
+  [PASS] range_rating
+
+Table: ORDERS
+------------------------------
+  [PASS] completeness_order_id
+  [PASS] completeness_customer_id
+  [PASS] completeness_product_id
+  [PASS] completeness_quantity
+  [PASS] completeness_unit_price
+  [PASS] completeness_total_amount
+  [PASS] completeness_order_date
+  [PASS] uniqueness_order_id
+  [PASS] range_quantity
+  [PASS] range_unit_price
+  [PASS] range_discount_percent
+  [PASS] range_total_amount
+  [PASS] allowed_values_status
+  [PASS] allowed_values_payment_method
