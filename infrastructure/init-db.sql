@@ -5,5 +5,10 @@ CREATE DATABASE airflow_db;
 CREATE USER airflow WITH PASSWORD 'airflow';
 GRANT ALL PRIVILEGES ON DATABASE airflow_db TO airflow;
 
--- Connect to shopflow_dw (default POSTGRES_DB) and grant access to user airflow
+-- Connect to airflow_db and grant schema privileges to user airflow (needed in PG 15+)
+\c airflow_db;
+GRANT ALL ON SCHEMA public TO airflow;
+
+-- Connect to shopflow_dw and grant access to user postgres
+\c shopflow_dw;
 GRANT ALL PRIVILEGES ON SCHEMA public TO postgres;
